@@ -1,5 +1,13 @@
 package net.ukr.zubenko.g.photogallery
 
-data class GalleryItem(val mId: String, val mCaption: String, val mUrl: String) {
+import com.google.gson.annotations.SerializedName
+
+data class GalleryItem(
+    @SerializedName("id")
+    val mId: String,
+    @SerializedName("title")
+    val mCaption: String,
+    @SerializedName("url_s")
+    val mUrl: String) {
     override fun toString() = mCaption
 }

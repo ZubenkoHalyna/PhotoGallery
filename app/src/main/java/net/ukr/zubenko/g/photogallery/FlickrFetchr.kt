@@ -2,8 +2,8 @@ package net.ukr.zubenko.g.photogallery
 
 import android.net.Uri
 import android.util.Log
+import com.google.gson.Gson
 import org.json.JSONException
-import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -16,6 +16,10 @@ class FlickrFetchr {
     companion object {
         private const val TAG = "FlickrFetchr"
         private const val API_KEY = "896315495eba9cebbb139ccaee07fb72"
+
+        private class SerializedItem(val photos: GalleryItemArray) {
+            class GalleryItemArray(val photo: Array<GalleryItem>)
+        }
     }
 
     fun getUrlBytes(urlSpec: String): ByteArray {
@@ -45,7 +49,7 @@ class FlickrFetchr {
         return String(getUrlBytes(urlSpec))
     }
 
-    fun fetchItems(): List<GalleryItem> {
+    fun fetchItems(page: Int): List<GalleryItem> {
         var list = listOf<GalleryItem>()
         try {
             val url = Uri.parse("https://api.flickr.com/services/rest/")
@@ -55,11 +59,11 @@ class FlickrFetchr {
                 .appendQueryParameter("format", "json")
                 .appendQueryParameter("nojsoncallback", "1")
                 .appendQueryParameter("extras", "url_s")
+                .appendQueryParameter("page", page.toString())
                 .build().toString()
             val jsonString = getUrlString(url)
             Log.i(TAG, "Received JSON: $jsonString")
-            val jsonBody = JSONObject(jsonString)
-            list = parseItems(jsonBody)
+            list = parseItems(jsonString)
         } catch (ioe: IOException) {
             Log.e(TAG, "Failed to fetch items", ioe)
         } catch (je: JSONException){
@@ -68,18 +72,7 @@ class FlickrFetchr {
         return list
     }
 
-    private fun parseItems(jsonBody: JSONObject): List<GalleryItem> {
-        val photosJsonObject = jsonBody.getJSONObject("photos")
-        val photoJsonArray = photosJsonObject.getJSONArray("photo")
-        val items = mutableListOf<GalleryItem>()
-
-        for (i in 0 until photoJsonArray.length()) {
-            val photoJsonObject = photoJsonArray.getJSONObject(i)
-            val item = GalleryItem(photoJsonObject.getString("id"),
-                                   photoJsonObject.getString("title"),
-                                   photoJsonObject.getString("url_s")?:"")
-            items.add(item)
-        }
-        return items.toList()
+    private fun parseItems(jsonString: String): List<GalleryItem> {
+        return Gson().fromJson(jsonString, SerializedItem::class.java).photos.photo.toList()
     }
 }
