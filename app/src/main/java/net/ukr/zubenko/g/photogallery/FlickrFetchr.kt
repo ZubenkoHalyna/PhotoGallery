@@ -16,6 +16,16 @@ class FlickrFetchr {
     companion object {
         private const val TAG = "FlickrFetchr"
         private const val API_KEY = "896315495eba9cebbb139ccaee07fb72"
+        private val FETCH_RECENTS_METHOD = "flickr.photos.getRecent"
+        private val SEARCH_METHOD = "flickr.photos.search"
+        private val ENDPOINT: Uri = Uri
+            .parse("https://api.flickr.com/services/rest/")
+            .buildUpon()
+            .appendQueryParameter("api_key", API_KEY)
+            .appendQueryParameter("format", "json")
+            .appendQueryParameter("nojsoncallback", "1")
+            .appendQueryParameter("extras", "url_s")
+            .build()
 
         private class SerializedItem(val photos: GalleryItemArray) {
             class GalleryItemArray(val photo: Array<GalleryItem>)
@@ -49,18 +59,20 @@ class FlickrFetchr {
         return String(getUrlBytes(urlSpec))
     }
 
-    fun fetchItems(page: Int): List<GalleryItem> {
+    private fun buildUrl(method: String, query: String, page: Int): String {
+        val uriBuilder = ENDPOINT.buildUpon()
+            .appendQueryParameter("method", method)
+            .appendQueryParameter("page", page.toString())
+
+        if (method == SEARCH_METHOD) {
+            uriBuilder.appendQueryParameter("text", query)
+        }
+        return uriBuilder.build().toString()
+    }
+
+    private fun downloadGalleryItems(url: String): List<GalleryItem> {
         var list = listOf<GalleryItem>()
         try {
-            val url = Uri.parse("https://api.flickr.com/services/rest/")
-                .buildUpon()
-                .appendQueryParameter("method", "flickr.photos.getRecent")
-                .appendQueryParameter("api_key", API_KEY)
-                .appendQueryParameter("format", "json")
-                .appendQueryParameter("nojsoncallback", "1")
-                .appendQueryParameter("extras", "url_s")
-                .appendQueryParameter("page", page.toString())
-                .build().toString()
             val jsonString = getUrlString(url)
             Log.i(TAG, "Received JSON: $jsonString")
             list = parseItems(jsonString)
@@ -70,6 +82,16 @@ class FlickrFetchr {
             Log.e(TAG, "Failed to parse JSON", je)
         }
         return list
+    }
+
+    fun fetchRecentPhotos(page: Int): List<GalleryItem> {
+        val url = buildUrl(FETCH_RECENTS_METHOD, "", page)
+        return downloadGalleryItems(url)
+    }
+
+    fun searchPhotos(query: String, page: Int): List<GalleryItem> {
+        val url = buildUrl(SEARCH_METHOD, query, page)
+        return downloadGalleryItems(url)
     }
 
     private fun parseItems(jsonString: String): List<GalleryItem> {

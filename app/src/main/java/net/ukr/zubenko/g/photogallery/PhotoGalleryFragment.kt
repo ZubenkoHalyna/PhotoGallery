@@ -5,19 +5,21 @@ import android.support.v4.app.Fragment
 import android.support.v7.widget.GridLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.Bitmap
 import android.os.Handler
+import android.support.v7.widget.SearchView
+import android.view.*
 import net.ukr.zubenko.g.photogallery.ThumbnailDownloader.Companion.ThumbnailDownloadListener
-
+import android.app.Activity
+import android.support.v4.content.ContextCompat.getSystemService
+import android.view.inputmethod.InputMethodManager
 
 
 class PhotoGalleryFragment: Fragment() {
     private lateinit var mPhotoRecyclerView: RecyclerView
+    private lateinit var searchView: SearchView
     private lateinit var mProgressWheel: ProgressBar
     private val mItems = mutableListOf<GalleryItem>()
     private var nextPage = 0
@@ -33,6 +35,7 @@ class PhotoGalleryFragment: Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         retainInstance = true
+        setHasOptionsMenu(true)
         loadNewPage()
 
         val responseHandler = Handler()
@@ -80,8 +83,71 @@ class PhotoGalleryFragment: Fragment() {
         return v
     }
 
+    override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
+        super.onCreateOptionsMenu(menu, menuInflater)
+        menuInflater.inflate(R.menu.fragment_photo_gallery, menu)
+
+        val searchItem = menu.findItem(R.id.menu_item_search)
+        searchView = searchItem.actionView as SearchView
+
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener{
+            override fun onQueryTextSubmit(s: String): Boolean {
+                Log.d(TAG, "QueryTextSubmit: $s")
+                activity?.let {
+                    QueryPreferences.setStoredQuery(it, s)
+                }
+                updateItems()
+                return true
+            }
+
+            override fun onQueryTextChange(s: String): Boolean {
+                Log.d(TAG, "QueryTextChange: $s")
+                return false
+            }
+        })
+
+        searchView.setOnSearchClickListener {
+            val query = activity?.let {
+                QueryPreferences.getStoredQuery(it)
+            } ?: ""
+            searchView.setQuery(query, false)
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean =
+        when (item.itemId) {
+            R.id.menu_item_clear -> {
+                hideKeyboard()
+                activity?.let {
+                    QueryPreferences.setStoredQuery(it, "")
+                }
+                updateItems()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+
+    private fun hideKeyboard() {
+        activity?.let { activity ->
+            view?.let { view ->
+                val imm = activity.getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(view.windowToken, 0)
+            }
+        }
+    }
+
+    private fun updateItems() {
+        nextPage = 0
+        hideKeyboard()
+        (mPhotoRecyclerView.adapter as? PhotoAdapter)?.mGalleryItems?.clear()
+        mPhotoRecyclerView.adapter?.notifyDataSetChanged()
+
+        loadNewPage()
+    }
+
     private fun loadNewPage() {
-        FetchPhotosTask(::setUpAdapter, nextPage).execute()
+        val searchString = context?.let { QueryPreferences.getStoredQuery(it) } ?: ""
+        FetchPhotosTask(::setUpAdapter, nextPage, searchString).execute()
         nextPage++
     }
 
