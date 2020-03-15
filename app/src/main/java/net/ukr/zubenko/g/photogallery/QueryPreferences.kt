@@ -5,6 +5,8 @@ import android.preference.PreferenceManager
 
 object QueryPreferences {
     private val PREF_SEARCH_QUERY = "searchQuery"
+    private val PREF_LAST_RESULT_ID = "lastResultId"
+
     fun getStoredQuery(context: Context): String {
         return PreferenceManager.getDefaultSharedPreferences(context)
             .getString(PREF_SEARCH_QUERY, "") ?: ""
@@ -14,6 +16,18 @@ object QueryPreferences {
         PreferenceManager.getDefaultSharedPreferences(context)
             .edit()
             .putString(PREF_SEARCH_QUERY, query)
+            .apply()
+    }
+
+    fun getLastResultId(context: Context): String {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+            .getString(PREF_LAST_RESULT_ID, "") ?: ""
+    }
+
+    fun setLastResultId(context: Context, lastResultId: String) {
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .edit()
+            .putString(PREF_LAST_RESULT_ID, lastResultId)
             .apply()
     }
 }

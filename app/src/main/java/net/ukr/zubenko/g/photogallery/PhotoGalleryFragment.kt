@@ -15,6 +15,10 @@ import net.ukr.zubenko.g.photogallery.ThumbnailDownloader.Companion.ThumbnailDow
 import android.app.Activity
 import android.support.v4.content.ContextCompat.getSystemService
 import android.view.inputmethod.InputMethodManager
+import android.content.ClipData.newIntent
+import android.content.Intent
+
+
 
 
 class PhotoGalleryFragment: Fragment() {
@@ -37,6 +41,9 @@ class PhotoGalleryFragment: Fragment() {
         retainInstance = true
         setHasOptionsMenu(true)
         loadNewPage()
+        activity?.let { activity ->
+            PollService.setServiceAlarm(activity, true)
+        }
 
         val responseHandler = Handler()
         mThumbnailDownloader = ThumbnailDownloader(responseHandler)
@@ -117,7 +124,6 @@ class PhotoGalleryFragment: Fragment() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean =
         when (item.itemId) {
             R.id.menu_item_clear -> {
-                hideKeyboard()
                 activity?.let {
                     QueryPreferences.setStoredQuery(it, "")
                 }
