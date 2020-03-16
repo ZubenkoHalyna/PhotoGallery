@@ -11,6 +11,14 @@ import android.os.SystemClock
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.ClipData.newIntent
+import android.content.ClipData.newIntent
+import android.support.v4.app.NotificationManagerCompat
+import android.support.v4.app.NotificationCompat
+import android.content.ClipData.newIntent
+
+
+
+
 
 
 
@@ -18,7 +26,7 @@ import android.content.ClipData.newIntent
 class PollService:IntentService(TAG) {
     companion object {
         private val TAG = "PollService"
-        private val POLL_INTERVAL_MS = TimeUnit.MINUTES.toMillis(1)
+        private val POLL_INTERVAL_MS = TimeUnit.MINUTES.toMillis(15)
 
         fun newIntent(context: Context): Intent {
             return Intent(context, PollService::class.java)
@@ -37,6 +45,11 @@ class PollService:IntentService(TAG) {
                 alarmManager.cancel(pi)
                 pi.cancel()
             }
+        }
+
+        fun isServiceAlarmOn(context: Context): Boolean {
+            val pi = PendingIntent.getService(context, 0, newIntent(context), PendingIntent.FLAG_NO_CREATE)
+            return pi != null
         }
     }
 
@@ -60,6 +73,20 @@ class PollService:IntentService(TAG) {
             Log.i(TAG, "Got an old result: $resultId")
         } else {
             Log.i(TAG, "Got a new result: $resultId")
+
+                val resources = resources
+                val i = PhotoGalleryActivity.newIntent(this)
+                val pi = PendingIntent.getActivity(this, 0, i, 0)
+                val notification = NotificationCompat.Builder(this)
+                    .setTicker(resources.getString(R.string.new_pictures_title))
+                    .setSmallIcon(android.R.drawable.ic_menu_report_image)
+                    .setContentTitle(resources.getString(R.string.new_pictures_title))
+                    .setContentText(resources.getString(R.string.new_pictures_text))
+                    .setContentIntent(pi)
+                    .setAutoCancel(true)
+                    .build()
+                val notificationManager = NotificationManagerCompat.from(this)
+                notificationManager.notify(0, notification)
         }
         QueryPreferences.setLastResultId(this, resultId)
     }

@@ -41,9 +41,6 @@ class PhotoGalleryFragment: Fragment() {
         retainInstance = true
         setHasOptionsMenu(true)
         loadNewPage()
-        activity?.let { activity ->
-            PollService.setServiceAlarm(activity, true)
-        }
 
         val responseHandler = Handler()
         mThumbnailDownloader = ThumbnailDownloader(responseHandler)
@@ -119,6 +116,16 @@ class PhotoGalleryFragment: Fragment() {
             } ?: ""
             searchView.setQuery(query, false)
         }
+
+        val toggleItem = menu.findItem(R.id.menu_item_toggle_polling)
+
+        context?.let { context ->
+            if (PollService.isServiceAlarmOn(context)) {
+                toggleItem.setTitle(R.string.stop_polling)
+            } else {
+                toggleItem.setTitle(R.string.start_polling)
+            }
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean =
@@ -128,6 +135,14 @@ class PhotoGalleryFragment: Fragment() {
                     QueryPreferences.setStoredQuery(it, "")
                 }
                 updateItems()
+                true
+            }
+            R.id.menu_item_toggle_polling -> {
+                activity?.let { activity ->
+                    val shouldStartAlarm = !PollService.isServiceAlarmOn(activity)
+                    PollService.setServiceAlarm(activity, shouldStartAlarm)
+                    activity.invalidateOptionsMenu()
+                }
                 true
             }
             else -> super.onOptionsItemSelected(item)
