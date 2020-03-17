@@ -62,8 +62,10 @@ class PhotoGalleryFragment: VisibleFragment() {
         isLayoutSet = false
         mPhotoRecyclerView = v.findViewById(R.id.photo_recycler_view)
         mProgressWheel = v.findViewById(R.id.progress_wheel)
-        mPhotoRecyclerView.adapter = PhotoAdapter(mItems, mThumbnailDownloader, requireActivity(), container)
-
+        context?.let { context ->
+            mPhotoRecyclerView.adapter =
+                PhotoAdapter(mItems, mThumbnailDownloader, requireActivity(), container, context)
+        }
         mPhotoRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
