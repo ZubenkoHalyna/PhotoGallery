@@ -1,6 +1,6 @@
 package net.ukr.zubenko.g.photogallery
 
-import android.app.IntentService
+import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -8,8 +8,6 @@ import android.net.ConnectivityManager
 import java.nio.file.Files.size
 import java.util.concurrent.TimeUnit
 import android.os.SystemClock
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.content.ClipData.newIntent
 import android.content.ClipData.newIntent
 import android.support.v4.app.NotificationManagerCompat
@@ -17,16 +15,14 @@ import android.support.v4.app.NotificationCompat
 import android.content.ClipData.newIntent
 
 
-
-
-
-
-
-
-class PollService:IntentService(TAG) {
+class PollService : IntentService(TAG) {
     companion object {
         private val TAG = "PollService"
-        private val POLL_INTERVAL_MS = TimeUnit.MINUTES.toMillis(15)
+        private val POLL_INTERVAL_MS = TimeUnit.MINUTES.toMillis(1)
+        val ACTION_SHOW_NOTIFICATION = "photogallery.SHOW_NOTIFICATION"
+        val PERM_PRIVATE = "photogallery.PRIVATE"
+        val REQUEST_CODE = "REQUEST_CODE"
+        val NOTIFICATION = "NOTIFICATION"
 
         fun newIntent(context: Context): Intent {
             return Intent(context, PollService::class.java)
@@ -45,6 +41,8 @@ class PollService:IntentService(TAG) {
                 alarmManager.cancel(pi)
                 pi.cancel()
             }
+
+            QueryPreferences.setAlarmOn(context, isOn)
         }
 
         fun isServiceAlarmOn(context: Context): Boolean {
@@ -59,36 +57,45 @@ class PollService:IntentService(TAG) {
         }
         val query = QueryPreferences.getStoredQuery(this)
         val lastResultId = QueryPreferences.getLastResultId(this)
-        val items: List<GalleryItem>
+        val items: List<GalleryItem> =
         if (query.isEmpty()) {
-            items = FlickrFetchr().fetchRecentPhotos(0)
+            FlickrFetchr().fetchRecentPhotos(0)
         } else {
-            items = FlickrFetchr().searchPhotos(query, 0)
+            FlickrFetchr().searchPhotos(query, 0)
         }
         if (items.isEmpty()) {
             return
         }
         val resultId = items[0].mId
-            if (resultId == lastResultId) {
+        if (resultId == lastResultId) {
             Log.i(TAG, "Got an old result: $resultId")
         } else {
             Log.i(TAG, "Got a new result: $resultId")
 
-                val resources = resources
-                val i = PhotoGalleryActivity.newIntent(this)
-                val pi = PendingIntent.getActivity(this, 0, i, 0)
-                val notification = NotificationCompat.Builder(this)
-                    .setTicker(resources.getString(R.string.new_pictures_title))
-                    .setSmallIcon(android.R.drawable.ic_menu_report_image)
-                    .setContentTitle(resources.getString(R.string.new_pictures_title))
-                    .setContentText(resources.getString(R.string.new_pictures_text))
-                    .setContentIntent(pi)
-                    .setAutoCancel(true)
-                    .build()
-                val notificationManager = NotificationManagerCompat.from(this)
-                notificationManager.notify(0, notification)
+            val resources = resources
+            val i = PhotoGalleryActivity.newIntent(this)
+            val pi = PendingIntent.getActivity(this, 0, i, 0)
+            val notification = NotificationCompat.Builder(this)
+                .setTicker(resources.getString(R.string.new_pictures_title))
+                .setSmallIcon(android.R.drawable.ic_menu_report_image)
+                .setContentTitle(resources.getString(R.string.new_pictures_title))
+                .setContentText(resources.getString(R.string.new_pictures_text))
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build()
+            showBackgroundNotification(0, notification)
         }
         QueryPreferences.setLastResultId(this, resultId)
+    }
+
+    private fun showBackgroundNotification(requestCode: Int, notification: Notification) {
+        val i = Intent(ACTION_SHOW_NOTIFICATION)
+        i.putExtra(REQUEST_CODE, requestCode)
+        i.putExtra(NOTIFICATION, notification)
+        sendOrderedBroadcast(
+            i, PERM_PRIVATE, null, null,
+            Activity.RESULT_OK, null, null
+        )
     }
 
     private fun isNetworkAvailableAndConnected(): Boolean {

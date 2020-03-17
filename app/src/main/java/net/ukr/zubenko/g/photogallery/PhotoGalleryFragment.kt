@@ -21,7 +21,7 @@ import android.content.Intent
 
 
 
-class PhotoGalleryFragment: Fragment() {
+class PhotoGalleryFragment: VisibleFragment() {
     private lateinit var mPhotoRecyclerView: RecyclerView
     private lateinit var searchView: SearchView
     private lateinit var mProgressWheel: ProgressBar
